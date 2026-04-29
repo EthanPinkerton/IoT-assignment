@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>ESP Display</title>
+    <!-- chart.js to display tempuratures in graph -->
+    <script src=" https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js "></script>
+  </head>
+  
+  <h1>Tempurature:</h1>
+  <p id="replace">no data</p>
+  
+  <canvas id="myChart" style="width:100%;max-width:1200px;height:100%;max-height:600px;"></canvas>
+  
+  <canvas id="LEDs" style="width:1200px;height:600px;"></canvas>
+  
+  <script>
+  function drawLED(ctx, offset, fill) {
+    ctx.fillStyle = fill
+    ctx.beginPath();
+    ctx.ellipse(offset * 50 + 25, 25, 20, 20, 0, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    ctx.fillStyle = "rgb(0,0,0)"
+    ctx.beginPath();
+    ctx.ellipse(offset * 50 + 25, 25, 20, 20, 0, 0, 2 * Math.PI);
+    ctx.stroke();
+  }
+  
+  function drawLEDs() {
+    let canvas = document.getElementById("LEDs");
+    if (canvas.getContext) {
+      let ctx = canvas.getContext("2d");
+      for (let i = 0; i < 6; i++) {
+        let fill = "rgb(255,255,255)"
+        if (i == 0 || i == 1) {
+          fill = "rgb(0,255,0)"
+        } else if (i == 2 || i == 3) {
+          fill = "rgb(255,255,0)"
+        } else if (i == 4 || i == 5) {
+          fill = "rgb(255,0,0)"
+        }
+        drawLED(ctx, i, fill);
+      }
+    }
+  }
+  
+  function canvasClicked(event) {
+    let canvas = document.getElementById("LEDs");
+    let bounds = canvas.getBoundingClientRect();
+    let x = event.clientX - bounds.left;
+    
+    let LED = parseInt(x / 200);
+    console.log(LED);
+  }
+  
+  function fullDate(now) {
+    date = now.getDate() + "/"
+           + (now.getMonth()+1)  + "/"
+           + now.getFullYear() + " "
+           + now.getHours() + ":"
+           + now.getMinutes() + ":"
+           + now.getSeconds();
+    return date;
+  }
+  
+  function time(now) {
+    return now.getHours() + ":"
+           + now.getMinutes() + ":"
+           + now.getSeconds();
+  }
+  
+  function displayData(data) {
+    document.getElementById("replace").textContent = data
+    chart.data.labels.push(time(new Date()));
+    chart.data.datasets.forEach((dataset) => {
+        dataset.data.push(data);
+    });
+    if (chart.data.labels.length >= 21) {
+      chart.data.labels.shift();
+      chart.data.datasets.forEach((dataset) => {
+        dataset.data.shift();
+      });
+    }
+    chart.update("none");
+  }
+  
+  //reload tempurature every second
+  function reloadPage() {
+    fetch('tempurature')
+      .then(response => response.json())
+      .then(data => displayData(data))
+      .catch(error => console.error('Error:', error));
+    setTimeout(() => {reloadPage()}, 1000);
+  }
+  
+  //setup graph
+  const ctx = document.getElementById('myChart');
+  chart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: [],
+      datasets: [{
+        backgroundColor:"rgba(0,0,255,1.0)",
+        borderColor: "rgba(0,0,255,0.1)",
+        data: []
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {display:false},
+        title: {
+          display: true,
+          text: "Tempurature from " + fullDate(new Date()),
+          font: {size:16}
+        }
+      }
+    }
+  });
+  
+  document.getElementById("LEDs").addEventListener("click", function click(event) {canvasClicked(event);});
+  drawLEDs();
+  reloadPage();
+  </script>
+</html>
