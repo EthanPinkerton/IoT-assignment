@@ -13,7 +13,7 @@ const int serverPort = 5000;
 
 // LEDs and modes
 int LEDs[] = {6,9,10,11,12,13};
-int LED_states[] = {0,0,0,0,0,0};
+int LEDstates[6];
 int button = 5;
 int buttonState = 0;
 int mode = 0;
@@ -91,11 +91,13 @@ void display_binary_temp() {
 }
 
 // Recieves custom LED state input from the web server
-int[] get_web_inputs(){}
+//int* get_web_inputs(){
+//  return {0,0,0,0,0,0};
+//}
 
 // Mode 2 - Web Control of LED States - Takes user inputs and outputs on physical LEDs
 void web_control() {
-  LEDstates = get_web_inputs();
+//  LEDstates = get_web_inputs();
   for (int i = 0; i < len_LEDs; i++){
     if (LEDstates[i] == 1){
       digitalWrite(LEDs[i], HIGH);
@@ -121,7 +123,7 @@ void changeMode() {
   } else if (mode == 1){
     bounce_pos = 0;
   } else if (mode == 2){
-    LEDstates = {0,0,0,0,0,0};
+//    LEDstates = [0,0,0,0,0,0];
   }
 }
 
@@ -171,7 +173,7 @@ String readLEDstates() {
 
 void send_temp() {
   // Construct request URL
-  if (connectServer()) {
+  if (false) {
     String url = "/send_temp?temp=";
     url += readTemperature();
     url += "&mode=";
@@ -185,7 +187,7 @@ void send_temp() {
     // Send HTTP GET request
     client.print(String("GET ") + url + " HTTP/1.1\n" +
                "Host: " + serverHost + "\n" +
-               "Connection: close\n\n");
+               "Connection: keep-alive\n\n");
     
     client.stop();
   }
@@ -227,11 +229,11 @@ void button_press(){
 // Modes: 0 -> binary temp display, 1 -> LED Chase (bounce), 2 -> web interface controlled
 void conduct_current_mode(){
   if (mode == 0) {
-    if (timer%50 == 0) {
+    if (timer%500 == 0) {
       display_binary_temp();
     }
   } else if (mode == 1){
-    if (timer%25 == 0) {
+    if (timer%250 == 0) {
       bounce();
     }
   } else if (mode == 2){
@@ -241,20 +243,15 @@ void conduct_current_mode(){
 
 // Main loop responsible for run time operations
 void loop() {
-  int time = millis();
 
   button_press();
   conduct_current_mode();
   
-  if (timer >= 200) {
+  if (timer >= 1000) {
     send_temp();
     timer = 0;
   }
   timer++;
   
-  if (millis() - time < 10) {
-    delay(millis() - time);
-  } else {
-    timer += (millis() - time)/10;
-  }
+  delay(1);
 }
