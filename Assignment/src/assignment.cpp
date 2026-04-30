@@ -173,7 +173,7 @@ String readLEDstates() {
 
 void send_temp() {
   // Construct request URL
-  if (false) {
+  if (client.connected()) {
     String url = "/send_temp?temp=";
     url += readTemperature();
     url += "&mode=";
@@ -189,7 +189,7 @@ void send_temp() {
                "Host: " + serverHost + "\n" +
                "Connection: keep-alive\n\n");
     
-    client.stop();
+//    client.stop();
   }
 }
 
