@@ -51,6 +51,7 @@ void handle_temp() {
   temp = readTemperature();
 }
 
+// Standby mode
 void blink(int pin) {
   if (blinkMode == 0) {
     digitalWrite(LEDs[pin], HIGH);
@@ -61,6 +62,7 @@ void blink(int pin) {
   }
 }
 
+// Mode 1 - LED Animation Pattern - 1 turned on LED bounces from one end to the other
 void bounce(){
   digitalWrite(LEDs[bounce_pos], HIGH);
   digitalWrite(LEDs[bounce_pos - bounce_dir], LOW);
@@ -70,10 +72,11 @@ void bounce(){
   } else if (bounce_pos == 0) {
     bounce_dir = 1;
   }
-  
   bounce_pos += bounce_dir;
 }
 
+// Mode 0 - Binary Temperature Display - Turns a temp int into a binary String
+// Each character of the String accounts for an LED being on or off
 void display_binary_temp() {
   handle_temp();
   int t = std::round(temp);
@@ -87,8 +90,10 @@ void display_binary_temp() {
   }
 }
 
+// Recieves custom LED state input from the web server
 int[] get_web_inputs(){}
 
+// Mode 2 - Web Control of LED States - Takes user inputs and outputs on physical LEDs
 void web_control() {
   LEDstates = get_web_inputs();
   for (int i = 0; i < len_LEDs; i++){
@@ -100,12 +105,14 @@ void web_control() {
   }
 }
 
+// All LEDs are set to OFF
 void clearLEDs() {
   for (int LED : LEDs) {
     digitalWrite(LED, LOW);
   }
 }
 
+// Set the initial state of the new mode
 void changeMode() {
   clearLEDs();
   
@@ -153,6 +160,7 @@ bool connectServer() {
   return true;
 }
 
+// Produces and returns a String of current LED states
 String readLEDstates() {
   String state = "";
   for (int LED : LEDs) {
@@ -231,18 +239,17 @@ void conduct_current_mode(){
   }
 }
 
+// Main loop responsible for run time operations
 void loop() {
   int time = millis();
 
   button_press();
-  
   conduct_current_mode();
   
   if (timer >= 200) {
     send_temp();
     timer = 0;
   }
-  
   timer++;
   
   if (millis() - time < 10) {
