@@ -27,18 +27,20 @@
     ctx.stroke();
   }
   
-  function drawLEDs() {
+  function drawLEDs(LEDs) {
     let canvas = document.getElementById("LEDs");
     if (canvas.getContext) {
       let ctx = canvas.getContext("2d");
       for (let i = 0; i < 6; i++) {
         let fill = "rgb(255,255,255)"
-        if (i == 0 || i == 1) {
-          fill = "rgb(0,255,0)"
-        } else if (i == 2 || i == 3) {
-          fill = "rgb(255,255,0)"
-        } else if (i == 4 || i == 5) {
-          fill = "rgb(255,0,0)"
+        if (LEDs[i] == "1") {
+          if (i == 0 || i == 1) {
+            fill = "rgb(0,255,0)"
+          } else if (i == 2 || i == 3) {
+            fill = "rgb(255,255,0)"
+          } else if (i == 4 || i == 5) {
+            fill = "rgb(255,0,0)"
+          }
         }
         drawLED(ctx, i, fill);
       }
@@ -70,11 +72,11 @@
            + now.getSeconds();
   }
   
-  function displayData(data) {
-    document.getElementById("replace").textContent = data
+  function displayTemp(temp) {
+    document.getElementById("replace").textContent = temp;
     chart.data.labels.push(time(new Date()));
     chart.data.datasets.forEach((dataset) => {
-        dataset.data.push(data);
+        dataset.data.push(temp);
     });
     if (chart.data.labels.length >= 21) {
       chart.data.labels.shift();
@@ -85,9 +87,15 @@
     chart.update("none");
   }
   
+  function displayData(data) {
+    displayTemp(data["temp"]);
+    
+    drawLEDs(data["leds"]);
+  }
+  
   //reload tempurature every second
   function reloadPage() {
-    fetch('tempurature')
+    fetch('get_values')
       .then(response => response.json())
       .then(data => displayData(data))
       .catch(error => console.error('Error:', error));
@@ -119,7 +127,7 @@
   });
   
   document.getElementById("LEDs").addEventListener("click", function click(event) {canvasClicked(event);});
-  drawLEDs();
+  drawLEDs("111100");
   reloadPage();
   </script>
 </html>

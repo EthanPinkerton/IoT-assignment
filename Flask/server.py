@@ -17,8 +17,13 @@ def read_temp():
   with open("tempurature.txt", "r") as f:
     return f.readlines()[0].strip()
 
-def write_mode():
-  open('LEDs.txt', 'w')
+def read_mode():
+  with open("tempurature.txt", "r") as f:
+    return f.readlines()[1].strip()
+
+def read_LEDs():
+  with open("tempurature.txt", "r") as f:
+    return f.readlines()[2].strip()
 
 index = get_html_file("index.html")
 
@@ -31,6 +36,10 @@ def hello_world():
 @app.route("/tempurature")
 def get_temp():
   return read_temp()
+
+@app.route("/get_values")
+def get_values():
+  return {"temp": read_temp(), "mode": read_mode(), "leds": read_LEDs()}
 
 @app.get("/send_temp")
 def store_temp():
