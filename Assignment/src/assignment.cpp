@@ -13,6 +13,7 @@ const int serverPort = 5000;
 
 // LEDs and modes
 int LEDs[] = {6,9,10,11,12,13};
+int LED_states[] = {0,0,0,0,0,0};
 int button = 5;
 int buttonState = 0;
 int mode = 0;
@@ -45,7 +46,6 @@ float readTemperature() {
   
   return tempC;
 }
-
 
 void handle_temp() {
   temp = readTemperature();
@@ -87,6 +87,10 @@ void display_binary_temp() {
   }
 }
 
+void web_control() {
+
+}
+
 void clearLEDs() {
   for (int LED : LEDs) {
     digitalWrite(LED, LOW);
@@ -100,6 +104,8 @@ void changeMode() {
     display_binary_temp();
   } else if (mode == 1){
     bounce_pos = 0;
+  } else if (mode == 2){
+    LEDstates = {0,0,0,0,0,0};
   }
 }
 
@@ -179,7 +185,6 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(TEMP_PIN, ADC_11db);
   
-  
   connectWifi();
   
   while(!connectServer()) {
@@ -187,6 +192,21 @@ void setup() {
     delay(500);
   }
   clearLEDs();
+}
+
+// Modes: 0 -> binary temp display, 1 -> LED Chase (bounce), 2 -> web interface controlled
+void conduct_current_mode(){
+  if (mode == 0) {
+    if (timer%50 == 0) {
+      display_binary_temp();
+    }
+  } else if (mode == 1){
+    if (timer%25 == 0) {
+      bounce();
+    }
+  } else if (mode == 2){
+    web_control();
+  }
 }
 
 void loop() {
@@ -200,15 +220,7 @@ void loop() {
     buttonState = 0;
   }
   
-  if (mode == 0) {
-    if (timer%50 == 0) {
-      display_binary_temp();
-    }
-  } else if (mode == 1){
-    if (timer%25 == 0) {
-      bounce();
-    }
-  }
+  conduct_current_mode();
   
   if (timer >= 200) {
     send_temp();
