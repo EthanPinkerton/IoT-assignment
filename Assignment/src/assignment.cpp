@@ -87,8 +87,17 @@ void display_binary_temp() {
   }
 }
 
-void web_control() {
+int[] get_web_inputs(){}
 
+void web_control() {
+  LEDstates = get_web_inputs();
+  for (int i = 0; i < len_LEDs; i++){
+    if (LEDstates[i] == 1){
+      digitalWrite(LEDs[i], HIGH);
+    } else if (LEDstates[i] == 0){
+      digitalWrite(LEDs[i], LOW);
+    }
+  }
 }
 
 void clearLEDs() {
@@ -194,6 +203,19 @@ void setup() {
   clearLEDs();
 }
 
+// Changes the mode on a single button press - toggle button functionality
+void button_press(){
+  if (digitalRead(button) == LOW && buttonState == 0) {
+    mode++;
+    mode = mode%3;
+    changeMode();
+    buttonState = 1;
+  } else if (digitalRead(button) == HIGH && buttonState == 1) {
+    buttonState = 0;
+  }
+}
+
+// Calls the current mode function depending on the mode state
 // Modes: 0 -> binary temp display, 1 -> LED Chase (bounce), 2 -> web interface controlled
 void conduct_current_mode(){
   if (mode == 0) {
@@ -211,14 +233,8 @@ void conduct_current_mode(){
 
 void loop() {
   int time = millis();
-  if (digitalRead(button) == LOW && buttonState == 0) {
-    mode++;
-    mode = mode%2;
-    changeMode();
-    buttonState = 1;
-  } else if (digitalRead(button) == HIGH && buttonState == 1) {
-    buttonState = 0;
-  }
+
+  button_press();
   
   conduct_current_mode();
   
