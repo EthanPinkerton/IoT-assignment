@@ -95,19 +95,6 @@ void display_binary_temp() {
 //  return {0,0,0,0,0,0};
 //}
 
-// Mode 2 - Web Control of LED States - Takes user inputs and outputs on physical LEDs
-void web_control(String response) {
-
-  // set LEDs 
-  for (int i = 0; i < len_LEDs; i++){
-    if (LEDstates[i] == 1){
-      digitalWrite(LEDs[i], HIGH);
-    } else if (LEDstates[i] == 0){
-      digitalWrite(LEDs[i], LOW);
-    }
-  }
-}
-
 // All LEDs are set to OFF
 void clearLEDs() {
   for (int LED : LEDs) {
@@ -178,34 +165,20 @@ void increment_mode() {
   changeMode();
 }
 
-void flip_LEDs(String binary_flip_LED){
-  for(int i = 1; i < len_LEDs; i++){
-    if (binary_flip_LED[i] == "1") {
-      if (digitalRead(LEDs[i]) == HIGH) {
-        digitalWrite(LEDs[i], LOW);
-      } else if (digitalRead(LEDs[i]) == LOW) {
-        digitalWrite(LEDs[i], HIGH);
+void flip_LEDs(std::string binary_flip_LED){
+  for(int i = 1; i < binary_flip_LED.length(); i++){
+    if (binary_flip_LED.at(i) == '1') {
+      mode =  2;
+      if (digitalRead(LEDs[i - 1]) == HIGH) {
+        digitalWrite(LEDs[i - 1], LOW);
+      } else if (digitalRead(LEDs[i - 1]) == LOW) {
+        digitalWrite(LEDs[i - 1], HIGH);
       }
     }
   }
 }
 
 void send_temp() {
-  char last = "";
-  bool reading_response = false;
-  String response = "";
-  while (client.available()) {
-      char c = client.read();
-      if (reading_response == true) {
-        response += c;
-      }
-      if (char c == "\n" && char last == "\n") {
-        reading_response = true;
-      }
-      last = c;
-      Serial.print(c);
-  }
-  web_control(response);
   connectServer();
   // Construct request URL
   if (client.connected()) {
@@ -224,10 +197,22 @@ void send_temp() {
                 "Host: " + serverHost + "\r\n" +
                 "Connection: keep-alive\r\n\r\n");
   }
-  if (response[0] == "1") {
-    increment_mode()
+}
+
+void get_response() {
+  std::string last = "";
+  while (client.available()) {
+      char c = client.read();
+      last += c;
   }
-  flip_LEDs(response);
+  if (last != "") {
+    std::string response = last.substr(last.length() - 7, 7);
+    Serial.println(response.c_str());
+    if (response.at(0) == '1') {
+      increment_mode();
+    }
+    flip_LEDs(response);
+  }
 }
 
 void setup() {
@@ -274,8 +259,6 @@ void conduct_current_mode(){
     if (timer%250 == 0) {
       bounce();
     }
-  } else if (mode == 2){
-    web_control();
   }
 }
 
@@ -285,7 +268,10 @@ void loop() {
   button_press();
   conduct_current_mode();
   
-  if (timer >= 2000) {
+  if (timer == 500) {
+    get_response();
+  }
+  if (timer >= 1000) {
     send_temp();
     timer = 0;
   }

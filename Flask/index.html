@@ -18,9 +18,10 @@
   <canvas id="myChart" style="width:100%;max-width:1200px;height:100%;max-height:600px;"></canvas>
   
   <button onclick="changeMode()">Change Mode</button>
-  <p>Current Mode:</p>
   <p id="current_mode">no data</p>
   
+  <h2>Led States</h2>
+  <p>Click an LED to toggle it on or off</p>
   <canvas id="LEDs" style="width:1200px;height:600px;"></canvas>
   
   <script>
@@ -96,9 +97,21 @@
     chart.update("none");
   }
   
+  function displayMode(mode) {
+    text = "Current Mode: ";
+    if (mode == "0") {
+      text += "Binary Display";
+    } else if (mode == "1") {
+      text += "Bouncing LED";
+    } else if (mode == "2") {
+      text += "Manual mode";
+    }
+    document.getElementById("current_mode").textContent = text;
+  }
+  
   function displayData(data) {
     displayTemp(data["temp"]);
-    
+    displayMode(data["mode"]);
     drawLEDs(data["leds"]);
   }
   

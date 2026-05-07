@@ -19,13 +19,16 @@ def reset_change():
   f.close()
 
 def change_mode():
+  leds = read_leds_change()
   f = open("change.txt", "w")
-  f.write("1\n" + read_leds_change())
+  f.write("1\n" + leds + "\n")
   f.close()
 
 def change_leds(i):
+  store = read_mode_change() + "\n" + read_leds_change()[:i] + "1" + read_leds_change()[i+1:] + "\n"
   f = open("change.txt", "w")
-  f.write(read_mode_change() + "\n" + read_leds_change()[:i] + "1" + read_leds_change()[i+1:])
+  f.write(store)
+  f.close()
 
 def read_mode_change():
   with open("change.txt", "r") as f:
@@ -71,7 +74,7 @@ def store_temp():
   write_temp(temp + "\n" + mode + "\n" + leds + "\n")
   r = read_mode_change() + read_leds_change()
   reset_change()
-  return 
+  return r
 
 @app.get("/change_mode")
 def store_mode():
