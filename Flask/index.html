@@ -53,7 +53,7 @@
     let x = event.clientX - bounds.left;
     
     let LED = parseInt(x / 200);
-    console.log(LED);
+    fetch('change_led?mode=2&change='+LED);
   }
   
   function fullDate(now) {
@@ -127,7 +127,7 @@
   });
   
   document.getElementById("LEDs").addEventListener("click", function click(event) {canvasClicked(event);});
-  drawLEDs("111100");
+  drawLEDs("000000");
   reloadPage();
   </script>
 </html>

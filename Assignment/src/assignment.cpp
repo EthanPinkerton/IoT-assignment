@@ -13,6 +13,7 @@ const int serverPort = 5000;
 
 // LEDs and modes
 int LEDs[] = {6,9,10,11,12,13};
+int LEDstates[6];
 int button = 5;
 int buttonState = 0;
 int mode = 0;
@@ -46,11 +47,11 @@ float readTemperature() {
   return tempC;
 }
 
-
 void handle_temp() {
   temp = readTemperature();
 }
 
+// Standby mode
 void blink(int pin) {
   if (blinkMode == 0) {
     digitalWrite(LEDs[pin], HIGH);
@@ -61,6 +62,7 @@ void blink(int pin) {
   }
 }
 
+// Mode 1 - LED Animation Pattern - 1 turned on LED bounces from one end to the other
 void bounce(){
   digitalWrite(LEDs[bounce_pos], HIGH);
   digitalWrite(LEDs[bounce_pos - bounce_dir], LOW);
@@ -70,10 +72,11 @@ void bounce(){
   } else if (bounce_pos == 0) {
     bounce_dir = 1;
   }
-  
   bounce_pos += bounce_dir;
 }
 
+// Mode 0 - Binary Temperature Display - Turns a temp int into a binary String
+// Each character of the String accounts for an LED being on or off
 void display_binary_temp() {
   handle_temp();
   int t = std::round(temp);
@@ -87,12 +90,31 @@ void display_binary_temp() {
   }
 }
 
+// Recieves custom LED state input from the web server
+//int* get_web_inputs(){
+//  return {0,0,0,0,0,0};
+//}
+
+// Mode 2 - Web Control of LED States - Takes user inputs and outputs on physical LEDs
+void web_control() {
+//  LEDstates = get_web_inputs();
+  for (int i = 0; i < len_LEDs; i++){
+    if (LEDstates[i] == 1){
+      digitalWrite(LEDs[i], HIGH);
+    } else if (LEDstates[i] == 0){
+      digitalWrite(LEDs[i], LOW);
+    }
+  }
+}
+
+// All LEDs are set to OFF
 void clearLEDs() {
   for (int LED : LEDs) {
     digitalWrite(LED, LOW);
   }
 }
 
+// Set the initial state of the new mode
 void changeMode() {
   clearLEDs();
   
@@ -100,6 +122,8 @@ void changeMode() {
     display_binary_temp();
   } else if (mode == 1){
     bounce_pos = 0;
+  } else if (mode == 2){
+//    LEDstates = [0,0,0,0,0,0];
   }
 }
 
@@ -138,6 +162,7 @@ bool connectServer() {
   return true;
 }
 
+// Produces and returns a String of current LED states
 String readLEDstates() {
   String state = "";
   for (int LED : LEDs) {
@@ -147,8 +172,13 @@ String readLEDstates() {
 }
 
 void send_temp() {
+  while (client.available()) {
+      char c = client.read();
+      Serial.print(c);
+  }
+  connectServer();
   // Construct request URL
-  if (connectServer()) {
+  if (client.connected()) {
     String url = "/send_temp?temp=";
     url += readTemperature();
     url += "&mode=";
@@ -160,11 +190,9 @@ void send_temp() {
     Serial.println(url);
     
     // Send HTTP GET request
-    client.print(String("GET ") + url + " HTTP/1.1\n" +
-               "Host: " + serverHost + "\n" +
-               "Connection: close\n\n");
-    
-    client.stop();
+    client.print(String("GET ") + url + " HTTP/1.1" + "\r\n" +
+                "Host: " + serverHost + "\r\n" +
+                "Connection: keep-alive\r\n\r\n");
   }
 }
 
@@ -179,8 +207,8 @@ void setup() {
   analogReadResolution(12);
   analogSetPinAttenuation(TEMP_PIN, ADC_11db);
   
-  
   connectWifi();
+  
   
   while(!connectServer()) {
     blink(1);
@@ -189,37 +217,45 @@ void setup() {
   clearLEDs();
 }
 
-void loop() {
-  int time = millis();
+// Changes the mode on a single button press - toggle button functionality
+void button_press(){
   if (digitalRead(button) == LOW && buttonState == 0) {
     mode++;
-    mode = mode%2;
+    mode = mode%3;
     changeMode();
     buttonState = 1;
   } else if (digitalRead(button) == HIGH && buttonState == 1) {
     buttonState = 0;
   }
-  
+}
+
+// Calls the current mode function depending on the mode state
+// Modes: 0 -> binary temp display, 1 -> LED Chase (bounce), 2 -> web interface controlled
+void conduct_current_mode(){
   if (mode == 0) {
-    if (timer%50 == 0) {
+    if (timer%500 == 0) {
       display_binary_temp();
     }
   } else if (mode == 1){
-    if (timer%25 == 0) {
+    if (timer%250 == 0) {
       bounce();
     }
+  } else if (mode == 2){
+    web_control();
   }
+}
+
+// Main loop responsible for run time operations
+void loop() {
+
+  button_press();
+  conduct_current_mode();
   
-  if (timer >= 200) {
+  if (timer >= 2000) {
     send_temp();
     timer = 0;
   }
-  
   timer++;
   
-  if (millis() - time < 10) {
-    delay(millis() - time);
-  } else {
-    timer += (millis() - time)/10;
-  }
+  delay(1);
 }
