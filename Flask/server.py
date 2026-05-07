@@ -1,6 +1,3 @@
-#run server with:
-#flask --app server.py run --host=0.0.0.0
-
 from flask import Flask
 from flask import request
 
@@ -9,7 +6,7 @@ def get_html_file(filename):
     return f.read()
 
 def write_temp(temp):
-  f = open("tempurature.txt", "w")
+  f = open("data.txt", "w")
   f.write(temp)
   f.close()
 
@@ -39,33 +36,32 @@ def read_leds_change():
    return f.readlines()[1].strip()
 
 def read_temp():
-  with open("tempurature.txt", "r") as f:
+  with open("data.txt", "r") as f:
     return f.readlines()[0].strip()
 
 def read_mode():
-  with open("tempurature.txt", "r") as f:
+  with open("data.txt", "r") as f:
     return f.readlines()[1].strip()
 
 def read_LEDs():
-  with open("tempurature.txt", "r") as f:
+  with open("data.txt", "r") as f:
     return f.readlines()[2].strip()
 
 index = get_html_file("index.html")
 
 app = Flask(__name__)
 
+# display webpage
 @app.route("/")
 def hello_world():
     return get_html_file("index.html")
 
-@app.route("/tempurature")
-def get_temp():
-  return read_temp()
-
+# provide ESP hardware values for webpage
 @app.route("/get_values")
 def get_values():
   return {"temp": read_temp(), "mode": read_mode(), "leds": read_LEDs()}
 
+# revice data values from ESP
 @app.get("/send_temp")
 def store_temp():
   temp = request.args.get('temp', "None")

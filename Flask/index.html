@@ -6,25 +6,59 @@
     <!-- chart.js to display tempuratures in graph -->
     <script src=" https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js "></script>
     <script>
+    // notify flask server when change mode button is pressed
     function changeMode() {
       fetch("/change_mode");
     }
     </script>
+    <style>
+    .outer {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .graph {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color:white;
+      width:100%;
+      max-width:1200px;
+    }
+    #myChart {
+      height:100%;
+      max-height:400px;
+    }
+    .mainclass {
+      text-align: center;
+      background-color: lightblue;
+    }
+    </style>
   </head>
-  
-  <h1>Tempurature:</h1>
-  <p id="replace">no data</p>
-  
-  <canvas id="myChart" style="width:100%;max-width:1200px;height:100%;max-height:600px;"></canvas>
-  
-  <button onclick="changeMode()">Change Mode</button>
-  <p id="current_mode">no data</p>
-  
-  <h2>Led States</h2>
-  <p>Click an LED to toggle it on or off</p>
-  <canvas id="LEDs" style="width:1200px;height:600px;"></canvas>
+  <body class="mainclass">
+    <h1>ESP32 Display</h1>
+    
+    <h2 id ="replace">Tempurature: no data</h2>
+    
+    <div class="outer">
+      <div class="graph">
+        <canvas id="myChart"></canvas>
+      </div>
+    </div>
+    
+    <br>
+    
+    <button onclick="changeMode()">Change Mode</button>
+    <p id="current_mode">no data</p>
+    
+    <h2>Led States</h2>
+    <p>Click an LED to toggle it on or off</p>
+    <canvas id="LEDs" style="width:1200px;height:600px;"></canvas>
+  </body>
   
   <script>
+  // function for drawing an individual LED
   function drawLED(ctx, offset, fill) {
     ctx.fillStyle = fill
     ctx.beginPath();
@@ -37,6 +71,7 @@
     ctx.stroke();
   }
   
+  // draw all the LEDs as on or off on a canvas
   function drawLEDs(LEDs) {
     let canvas = document.getElementById("LEDs");
     if (canvas.getContext) {
@@ -57,6 +92,7 @@
     }
   }
   
+  // check which led was clicked and send to flask server
   function canvasClicked(event) {
     let canvas = document.getElementById("LEDs");
     let bounds = canvas.getBoundingClientRect();
@@ -66,6 +102,7 @@
     fetch('change_led?change='+LED);
   }
   
+  // get pretty string of current date
   function fullDate(now) {
     date = now.getDate() + "/"
            + (now.getMonth()+1)  + "/"
@@ -76,18 +113,21 @@
     return date;
   }
   
+  // get pretty string of current time
   function time(now) {
     return now.getHours() + ":"
            + now.getMinutes() + ":"
            + now.getSeconds();
   }
   
+  // Display tempurature and add value to the graph
   function displayTemp(temp) {
-    document.getElementById("replace").textContent = temp;
+    document.getElementById("replace").textContent = "Tempurature: " + temp;
     chart.data.labels.push(time(new Date()));
     chart.data.datasets.forEach((dataset) => {
         dataset.data.push(temp);
     });
+    // maximum of 21 values in the graph
     if (chart.data.labels.length >= 21) {
       chart.data.labels.shift();
       chart.data.datasets.forEach((dataset) => {
@@ -97,8 +137,9 @@
     chart.update("none");
   }
   
+  // display the current LED pattern mode
   function displayMode(mode) {
-    text = "Current Mode: ";
+    text = "Current Pattern Mode: ";
     if (mode == "0") {
       text += "Binary Display";
     } else if (mode == "1") {
@@ -109,13 +150,14 @@
     document.getElementById("current_mode").textContent = text;
   }
   
+  // display data from ESP
   function displayData(data) {
     displayTemp(data["temp"]);
     displayMode(data["mode"]);
     drawLEDs(data["leds"]);
   }
   
-  //reload tempurature every second
+  //reload ESP hardware data every second
   function reloadPage() {
     fetch('get_values')
       .then(response => response.json())
@@ -149,6 +191,7 @@
   });
   
   document.getElementById("LEDs").addEventListener("click", function click(event) {canvasClicked(event);});
+  // display leds as all off initally
   drawLEDs("000000");
   reloadPage();
   </script>

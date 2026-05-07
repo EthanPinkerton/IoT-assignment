@@ -5,9 +5,11 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 
+// ssid and password for wifi
 const char* ssid = "Xperia_6145";
 const char* password = "12345678321";
 
+// ip address and port for flask server
 const char* serverHost = "10.49.108.58";
 const int serverPort = 5000;
 
@@ -29,7 +31,6 @@ int timer = 0;
 int TEMP_PIN = 8;
 const double ADC_MAX = 4095.0;
 const double VREF = 3.3;
-float temp;
 
 WiFiClient client;
 
@@ -45,10 +46,6 @@ float readTemperature() {
   float tempC = (voltage - 0.5) * 100.0;
   
   return tempC;
-}
-
-void handle_temp() {
-  temp = readTemperature();
 }
 
 // Standby mode
@@ -78,8 +75,7 @@ void bounce(){
 // Mode 0 - Binary Temperature Display - Turns a temp int into a binary String
 // Each character of the String accounts for an LED being on or off
 void display_binary_temp() {
-  handle_temp();
-  int t = std::round(temp);
+  int t = std::round(readTemperature());
   std::string binary = std::bitset<len_LEDs>(t).to_string();
   for (int i = 0; i < len_LEDs; i++) {
     if (binary[i] == '1') {
@@ -89,11 +85,6 @@ void display_binary_temp() {
     }
   }
 }
-
-// Recieves custom LED state input from the web server
-//int* get_web_inputs(){
-//  return {0,0,0,0,0,0};
-//}
 
 // All LEDs are set to OFF
 void clearLEDs() {
@@ -115,6 +106,8 @@ void changeMode() {
   }
 }
 
+// Connects ESP32 to wifi
+// Waits until wifi is connected before continuing
 void connectWifi() {
   WiFi.begin(ssid,password);
   
@@ -134,6 +127,7 @@ void connectWifi() {
   Serial.println(WiFi.localIP());
 }
 
+// Establish connection with flask server
 bool connectServer() {
   Serial.print("Connecting to server ");
   Serial.print(serverHost);
@@ -159,25 +153,7 @@ String readLEDstates() {
   return state;
 }
 
-void increment_mode() {
-  mode++;
-  mode = mode%3;
-  changeMode();
-}
-
-void flip_LEDs(std::string binary_flip_LED){
-  for(int i = 1; i < binary_flip_LED.length(); i++){
-    if (binary_flip_LED.at(i) == '1') {
-      mode =  2;
-      if (digitalRead(LEDs[i - 1]) == HIGH) {
-        digitalWrite(LEDs[i - 1], LOW);
-      } else if (digitalRead(LEDs[i - 1]) == LOW) {
-        digitalWrite(LEDs[i - 1], HIGH);
-      }
-    }
-  }
-}
-
+// Send tempurature, mode and led data to flask server
 void send_temp() {
   connectServer();
   // Construct request URL
@@ -199,6 +175,28 @@ void send_temp() {
   }
 }
 
+// Change the current mode
+void increment_mode() {
+  mode++;
+  mode = mode%3;
+  changeMode();
+}
+
+// Check if any LEDs have been changed from web interface
+void flip_LEDs(std::string binary_flip_LED){
+  for(int i = 1; i < binary_flip_LED.length(); i++){
+    if (binary_flip_LED.at(i) == '1') {
+      mode =  2;
+      if (digitalRead(LEDs[i - 1]) == HIGH) {
+        digitalWrite(LEDs[i - 1], LOW);
+      } else if (digitalRead(LEDs[i - 1]) == LOW) {
+        digitalWrite(LEDs[i - 1], HIGH);
+      }
+    }
+  }
+}
+
+// Check response from the server and change internal state if needed
 void get_response() {
   std::string last = "";
   while (client.available()) {
@@ -213,27 +211,6 @@ void get_response() {
     }
     flip_LEDs(response);
   }
-}
-
-void setup() {
-  Serial.begin(115200);
-  
-  for (int LED : LEDs) {
-    pinMode(LED, OUTPUT);
-  }
-  
-  pinMode(button, INPUT_PULLUP);
-  analogReadResolution(12);
-  analogSetPinAttenuation(TEMP_PIN, ADC_11db);
-  
-  connectWifi();
-  
-  
-  while(!connectServer()) {
-    blink(1);
-    delay(500);
-  }
-  clearLEDs();
 }
 
 // Changes the mode on a single button press - toggle button functionality
@@ -260,6 +237,28 @@ void conduct_current_mode(){
       bounce();
     }
   }
+}
+
+// Setup function runs first
+void setup() {
+  Serial.begin(115200);
+  
+  for (int LED : LEDs) {
+    pinMode(LED, OUTPUT);
+  }
+  
+  pinMode(button, INPUT_PULLUP);
+  analogReadResolution(12);
+  analogSetPinAttenuation(TEMP_PIN, ADC_11db);
+  
+  connectWifi();
+  
+  
+  while(!connectServer()) {
+    blink(1);
+    delay(500);
+  }
+  clearLEDs();
 }
 
 // Main loop responsible for run time operations
