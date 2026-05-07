@@ -26,7 +26,7 @@
       width:100%;
       max-width:1200px;
     }
-    #myChart {
+    #tempgraph {
       height:100%;
       max-height:400px;
     }
@@ -43,7 +43,7 @@
     
     <div class="outer">
       <div class="graph">
-        <canvas id="myChart"></canvas>
+        <canvas id="tempgraph"></canvas>
       </div>
     </div>
     
@@ -167,7 +167,7 @@
   }
   
   //setup graph
-  const ctx = document.getElementById('myChart');
+  const ctx = document.getElementById('tempgraph');
   chart = new Chart(ctx, {
     type: "line",
     data: {

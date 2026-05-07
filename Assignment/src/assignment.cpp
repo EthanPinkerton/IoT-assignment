@@ -14,9 +14,8 @@ const char* serverHost = "10.49.108.58";
 const int serverPort = 5000;
 
 // LEDs and modes
-int LEDs[] = {6,9,10,11,12,13};
-int LEDstates[6];
-int button = 5;
+const int LEDs[] = {6,9,10,11,12,13};
+const int BUTTON_PINOUT = 5;
 int buttonState = 0;
 int mode = 0;
 int blinkMode = 0;
@@ -28,7 +27,7 @@ const int len_LEDs = sizeof(LEDs) / sizeof(LEDs[0]);
 int timer = 0;
 
 //tempurature monitor
-int TEMP_PIN = 8;
+const int TEMP_PIN = 8;
 const double ADC_MAX = 4095.0;
 const double VREF = 3.3;
 
@@ -101,8 +100,6 @@ void changeMode() {
     display_binary_temp();
   } else if (mode == 1){
     bounce_pos = 0;
-  } else if (mode == 2){
-//    LEDstates = [0,0,0,0,0,0];
   }
 }
 
@@ -183,9 +180,9 @@ void increment_mode() {
 }
 
 // Check if any LEDs have been changed from web interface
-void flip_LEDs(std::string binary_flip_LED){
-  for(int i = 1; i < binary_flip_LED.length(); i++){
-    if (binary_flip_LED.at(i) == '1') {
+void flip_LEDs(std::string response){
+  for(int i = 1; i < response.length(); i++){
+    if (response.at(i) == '1') {
       mode =  2;
       if (digitalRead(LEDs[i - 1]) == HIGH) {
         digitalWrite(LEDs[i - 1], LOW);
@@ -198,13 +195,13 @@ void flip_LEDs(std::string binary_flip_LED){
 
 // Check response from the server and change internal state if needed
 void get_response() {
-  std::string last = "";
+  std::string fullResponse = "";
   while (client.available()) {
       char c = client.read();
-      last += c;
+      fullResponse += c;
   }
-  if (last != "") {
-    std::string response = last.substr(last.length() - 7, 7);
+  if (fullResponse != "") {
+    std::string response = fullResponse.substr(fullResponse.length() - 7, 7);
     Serial.println(response.c_str());
     if (response.at(0) == '1') {
       increment_mode();
@@ -215,12 +212,12 @@ void get_response() {
 
 // Changes the mode on a single button press - toggle button functionality
 void button_press(){
-  if (digitalRead(button) == LOW && buttonState == 0) {
+  if (digitalRead(BUTTON_PINOUT) == LOW && buttonState == 0) {
     mode++;
     mode = mode%3;
     changeMode();
     buttonState = 1;
-  } else if (digitalRead(button) == HIGH && buttonState == 1) {
+  } else if (digitalRead(BUTTON_PINOUT) == HIGH && buttonState == 1) {
     buttonState = 0;
   }
 }
@@ -247,7 +244,7 @@ void setup() {
     pinMode(LED, OUTPUT);
   }
   
-  pinMode(button, INPUT_PULLUP);
+  pinMode(BUTTON_PINOUT, INPUT_PULLUP);
   analogReadResolution(12);
   analogSetPinAttenuation(TEMP_PIN, ADC_11db);
   
