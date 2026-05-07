@@ -1,15 +1,21 @@
 #include <Arduino.h>
+//#include <ArduinoJson.h>
 #include <bitset>
 #include <cmath>
 #include <string>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <SocketIOclient.h>
 
 const char* ssid = "Xperia_6145";
 const char* password = "12345678321";
 
 const char* serverHost = "10.49.108.58";
 const int serverPort = 5000;
+
+const char* webSocketServer = "ws://10.49.108.58:5000";
+
+SocketIOclient socketIO;
 
 // LEDs and modes
 int LEDs[] = {6,9,10,11,12,13};
@@ -146,6 +152,71 @@ void connectWifi() {
   Serial.println(WiFi.localIP());
 }
 
+void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
+    switch(type) {
+        case sIOtype_DISCONNECT:
+            Serial.printf("[IOc] Disconnected!\n");
+            break;
+        case sIOtype_CONNECT:
+            Serial.printf("[IOc] Connected to url: %s\n", payload);
+
+            // join default namespace (no auto join in Socket.IO V3)
+            socketIO.send(sIOtype_CONNECT, "/");
+            break;
+        case sIOtype_EVENT:
+//        {
+//            char * sptr = NULL;
+//            int id = strtol((char *)payload, &sptr, 10);
+//            Serial.printf("[IOc] get event: %s id: %d\n", payload, id);
+//            if(id) {
+//                payload = (uint8_t *)sptr;
+//            }
+//            DynamicJsonDocument doc(1024);
+//            DeserializationError error = deserializeJson(doc, payload, length);
+//            if(error) {
+//                Serial.print(F("deserializeJson() failed: "));
+//                Serail.println(error.c_str());
+//                return;
+//            }
+//
+//            String eventName = doc[0];
+//            Serial.printf("[IOc] event name: %s\n", eventName.c_str());
+//
+//            // Message Includes a ID for a ACK (callback)
+//            if(id) {
+//                // create JSON message for Socket.IO (ack)
+//                DynamicJsonDocument docOut(1024);
+//                JsonArray array = docOut.to<JsonArray>();
+//
+//                // add payload (parameters) for the ack (callback function)
+//                JsonObject param1 = array.createNestedObject();
+//                param1["now"] = millis();
+//
+//                // JSON to String (serializion)
+//                String output;
+//                output += id;
+//                serializeJson(docOut, output);
+//
+//                // Send event
+//                socketIO.send(sIOtype_ACK, output);
+//            }
+//        }
+            break;
+        case sIOtype_ACK:
+            Serial.printf("[IOc] get ack: %u\n", length);
+            break;
+        case sIOtype_ERROR:
+            Serial.printf("[IOc] get error: %u\n", length);
+            break;
+        case sIOtype_BINARY_EVENT:
+            Serial.printf("[IOc] get binary: %u\n", length);
+            break;
+        case sIOtype_BINARY_ACK:
+            Serial.printf("[IOc] get binary ack: %u\n", length);
+            break;
+    }
+}
+
 bool connectServer() {
   Serial.print("Connecting to server ");
   Serial.print(serverHost);
@@ -185,11 +256,14 @@ void send_temp() {
     Serial.println(url);
     
     // Send HTTP GET request
-    client.print(String("GET ") + url + " HTTP/1.1\n" +
-               "Host: " + serverHost + "\n" +
-               "Connection: keep-alive\n\n");
+    client.print(String("GET ") + url + " HTTP/1.1" + "\r\n" +
+                "Host: " + serverHost + "\r\n" +
+                "Connection: keep-alive\r\n\r\n");
     
-//    client.stop();
+    while (client.available()) {
+      char c = client.read();
+      Serial.print(c);
+    }
   }
 }
 
@@ -206,11 +280,16 @@ void setup() {
   
   connectWifi();
   
+  
   while(!connectServer()) {
     blink(1);
     delay(500);
   }
   clearLEDs();
+  
+  socketIO.begin(serverHost, serverPort, "/socket.io/?EIO=4");
+  // Connect to WebSocket server
+  socketIO.onEvent(socketIOEvent); // Register the event handler
 }
 
 // Changes the mode on a single button press - toggle button functionality
@@ -247,8 +326,9 @@ void loop() {
   button_press();
   conduct_current_mode();
   
-  if (timer >= 1000) {
+  if (timer >= 100) {
     send_temp();
+    socketIO.loop();
     timer = 0;
   }
   timer++;
