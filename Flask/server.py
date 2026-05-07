@@ -13,15 +13,27 @@ def write_temp(temp):
   f.write(temp)
   f.close()
 
-def write_mode(mode):
-  f = open("tempurature.txt", "w")
-  f.write(read_temp() + "\n" + mode + "\n" + read_LEDs() + "\n")
+def reset_change():
+  f = open("change.txt", "w+")
+  f.write("0\n000000\n")
   f.close()
 
-def write_leds(leds):
-  f = open("tempurature.txt", "w")
-  f.write(read_temp() + "\n" + leds)
+def change_mode():
+  f = open("change.txt", "w")
+  f.write("1\n" + read_leds_change())
   f.close()
+
+def change_leds(i):
+  f = open("change.txt", "w")
+  f.write(read_mode_change() + "\n" + read_leds_change()[:i] + "1" + read_leds_change()[i+1:])
+
+def read_mode_change():
+  with open("change.txt", "r") as f:
+    return f.readlines()[0].strip()
+
+def read_leds_change():
+  with open("change.txt", "r") as f:
+   return f.readlines()[1].strip()
 
 def read_temp():
   with open("tempurature.txt", "r") as f:
@@ -57,24 +69,19 @@ def store_temp():
   mode = request.args.get('mode', "None")
   leds = request.args.get('LEDs', "None")
   write_temp(temp + "\n" + mode + "\n" + leds + "\n")
-  return ""
+  r = read_mode_change() + read_leds_change()
+  reset_change()
+  return 
 
-@app.post("/change_mode")
+@app.get("/change_mode")
 def store_mode():
-  mode = request.args.get('mode', "None")
-  write_mode(mode)
+  change_mode()
   return ""
 
-@app.post("/change_led")
+@app.get("/change_led")
 def change_led():
-  mode = request.args.get('mode', "None")
-  change = request.args.get('change', "None")
-  leds = read_LEDs()
-  if leds[change] == "0":
-    leds = leds[:change] + "1" + leds[change+1:]
-  else:
-    leds[change] = "0"
-  write_leds(mode + "\n" + leds + "\n")
+  change = int(request.args.get('change', "None"))
+  change_leds(change)
   return ""
 
 app.run(host="0.0.0.0")
